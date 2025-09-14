@@ -3,20 +3,17 @@ import styled from "@emotion/styled";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { setSortBy } from "@/store/slices/contentSlice";
 import { SortBy } from "@/types";
+import { colors, radii } from "@/theme/tokens";
 
 const Dropdown = styled.select`
   padding: 6px 10px;
-  border-radius: 8px;
-  border: 1px solid #ddd;
-  background: white;
+  border-radius: ${radii.md};
+  border: 1px solid ${colors.border};
+  background: ${colors.surface};
+  color: ${colors.textPrimary};
   font-size: 14px;
   cursor: pointer;
   min-width: 160px;
-
-  &:focus {
-    outline: none;
-    border-color: #999;
-  }
 `;
 
 export default function SortDropdown() {
@@ -24,7 +21,6 @@ export default function SortDropdown() {
   const sortBy = useAppSelector((s) => s.content.sortBy);
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    // ✅ narrow to SortBy safely
     const value = e.target.value as SortBy;
     dispatch(setSortBy(value));
   };

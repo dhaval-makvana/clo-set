@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Providers from "./providers";
+import EmotionRootStyleRegistry from "@/app/emotion-ssr";
 
 export const metadata: Metadata = {
   title: "CLO-SET Connect",
@@ -14,7 +15,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <Providers>{children}</Providers>
+        <EmotionRootStyleRegistry>
+          <Providers>{children}</Providers>
+        </EmotionRootStyleRegistry>
       </body>
     </html>
   );

@@ -19,8 +19,10 @@ const FiltersRow = styled.div`
 
 const FilterGroup = styled.div`
   display: flex;
-  flex-wrap: wrap;
   gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  width: 100%;
 `;
 
 const SortRow = styled.div`
@@ -31,18 +33,12 @@ const SortRow = styled.div`
 export default function FilterBar() {
   return (
     <Wrapper>
-      {/* 1️⃣ Searchbar full width */}
       <SearchBar />
-
-      {/* 2️⃣ Filters row with Reset button */}
       <FiltersRow>
         <FilterGroup>
           <Filters />
         </FilterGroup>
-        {/* Reset button is part of Filters component (or we can pass as prop) */}
       </FiltersRow>
-
-      {/* 3️⃣ Sorting row right aligned */}
       <SortRow>
         <SortDropdown />
       </SortRow>

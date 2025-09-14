@@ -1,44 +1,69 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import styled from "@emotion/styled";
-import { useDispatch, useSelector } from "react-redux";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useAppDispatch, useAppSelector } from "@/store";
 import { setQuery } from "@/store/slices/contentSlice";
-import { RootState } from "@/store";
+import { useRouter, useSearchParams } from "next/navigation";
+import { colors, radii } from "@/theme/tokens";
+
 const Wrap = styled.div`
-  background: white;
+  background: ${colors.surface};
   padding: 8px;
-  border-radius: 8px;
+  border-radius: ${radii.md};
 `;
+
+const Input = styled.input`
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: ${radii.sm};
+  border: 1px solid ${colors.border};
+  background: ${colors.background};
+  color: ${colors.textPrimary};
+  font-size: 14px;
+`;
+
+const Button = styled.button`
+  margin-left: 8px;
+  background: ${colors.accent};
+  color: ${colors.textPrimary};
+  border: none;
+  padding: 6px 12px;
+  border-radius: ${radii.sm};
+  cursor: pointer;
+`;
+
 export default function SearchBar() {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const filters = useSelector((s: RootState) => s.content.filters);
+  const filters = useAppSelector((s) => s.content.filters);
   const [val, setVal] = useState(filters.q);
+
   useEffect(() => setVal(filters.q), [filters.q]);
-  const onSearch = (e: React.FormEvent) => {
-    e.preventDefault();
+
+  const onSearch = (e?: React.FormEvent) => {
+    e?.preventDefault();
     dispatch(setQuery(val));
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParams?.toString() ?? "");
     val ? params.set("q", val) : params.delete("q");
-    router.replace("?" + params.toString());
+    // preserve other params already present (pricing, minPrice, maxPrice, sortBy)
+    router.replace(params.toString() ? `?${params.toString()}` : "/", {
+      scroll: false,
+    });
   };
+
   return (
     <Wrap>
       <form onSubmit={onSearch} style={{ display: "flex", gap: 8 }}>
-        <input
+        <Input
           value={val}
           onChange={(e) => setVal(e.target.value)}
           placeholder="Search..."
-          style={{
-            flex: 1,
-            padding: "8px 10px",
-            borderRadius: 6,
-            border: "1px solid #e6e6f0",
-          }}
+          aria-label="Search items"
         />
-        <button type="submit">Search</button>
+        <Button type="button" onClick={() => onSearch()}>
+          Search
+        </Button>
       </form>
     </Wrap>
   );

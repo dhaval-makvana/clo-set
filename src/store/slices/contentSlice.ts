@@ -101,9 +101,9 @@ const slice = createSlice({
 
       state.maxPriceAvailable = maxPrice;
 
-      // only set default price range if current range is the initial placeholder (0,0)
+      // ✅ Fix: Ensure priceRange is set to a proper numeric range
       if (
-        state.filters.priceRange[0] === 0 &&
+        !Number.isFinite(state.filters.priceRange[1]) || // handle Infinity
         state.filters.priceRange[1] === 0
       ) {
         state.filters.priceRange = [0, maxPrice];

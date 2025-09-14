@@ -1,11 +1,12 @@
 "use client";
 import styled from "@emotion/styled";
+import { colors, radii, shadows } from "@/theme/tokens";
 
 const SkeletonCard = styled.div`
-  background: white;
-  border-radius: 12px;
+  background: ${colors.surface};
+  border-radius: ${radii.lg};
   overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  box-shadow: ${shadows.card};
   display: flex;
   flex-direction: column;
   animation: pulse 1.5s infinite ease-in-out;
@@ -26,7 +27,7 @@ const SkeletonCard = styled.div`
 const ThumbSkeleton = styled.div`
   width: 100%;
   height: 160px;
-  background: #e5e7eb;
+  background: ${colors.skeleton};
 `;
 
 const BodySkeleton = styled.div`
@@ -38,7 +39,7 @@ const BodySkeleton = styled.div`
 
 const Line = styled.div<{ w?: string }>`
   height: 14px;
-  background: #e5e7eb;
+  background: ${colors.skeleton};
   border-radius: 4px;
   width: ${({ w }) => w || "100%"};
 `;

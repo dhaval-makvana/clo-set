@@ -1,4 +1,3 @@
-// lib/emotion-cache.ts
 import createCache from "@emotion/cache";
 
 export function createEmotionCache() {
