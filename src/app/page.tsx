@@ -1,114 +1,22 @@
-"use client";
-
-import React, { useEffect, useCallback, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
-
-// components
+import ContentGridClient from "./Client";
 import FilterBar from "@/components/FilterBar";
-import ContentCard from "@/components/ProductCard";
-import { Grid } from "@/components/ProductGrid";
-import { InfiniteObserver } from "@/components/InfiniteObserver";
-import ContentSkeleton from "@/components/Shimmer";
+import { fetchAllProducts } from "@/service/product"; // service layer
+import { Suspense } from "react";
 
-// store
-import { useAppDispatch, useAppSelector } from "@/store";
-import {
-  fetchContents,
-  loadNextPage,
-  setPageFromUrl,
-} from "@/store/slices/contentSlice";
-
-import { Pricing } from "@/types";
-
-function PageContent() {
-  const dispatch = useAppDispatch();
-  const searchParams = useSearchParams();
-  const { items, loading, isPaginating, hasMore, page } = useAppSelector(
-    (s) => s.content
-  );
-
-  useEffect(() => {
-    const q = searchParams.get("q") ?? "";
-
-    const pricingParam = searchParams.get("pricing");
-    const pricing: Pricing[] = pricingParam
-      ? pricingParam
-          .split(",")
-          .filter(
-            (p): p is Pricing =>
-              p === "Paid" || p === "Free" || p === "View Only"
-          )
-      : [];
-
-    const minP = searchParams.get("minPrice");
-    const maxP = searchParams.get("maxPrice");
-
-    let priceRange: [number, number] | undefined;
-    if (minP != null && maxP != null) {
-      const minN = Number(minP);
-      const maxN = Number(maxP);
-      if (!Number.isNaN(minN) && !Number.isNaN(maxN)) priceRange = [minN, maxN];
-    }
-
-    dispatch(setPageFromUrl({ q, pricing, priceRange }));
-    dispatch(fetchContents());
-  }, [dispatch, searchParams]);
-
-  const onIntersect = useCallback(() => {
-    if (!loading && hasMore) {
-      dispatch(loadNextPage()); // uses thunk with delay
-    }
-  }, [dispatch, loading, hasMore]);
+export default async function Page() {
+  // Fetch first render on the server
+  const initialItems = await fetchAllProducts();
 
   return (
-    <div
-      style={{
-        maxWidth: 1100,
-        margin: "24px auto",
-        padding: "0 16px",
-        display: "grid",
-        gap: 16,
-      }}
-    >
+    <div style={{ maxWidth: 1100, margin: "24px auto", padding: "0 16px" }}>
       <h1>CLO-SET Connect — Store</h1>
 
-      <FilterBar />
+      <Suspense fallback={<div>Loading filter bar...</div>}>
+        <FilterBar />
+      </Suspense>
 
-      <Grid>
-        {loading && page === 1
-          ? Array.from({ length: 12 }).map((_, i) => (
-              <ContentSkeleton key={`skeleton-${i}`} />
-            ))
-          : items.map((it) => <ContentCard key={it.id} item={it} />)}
-      </Grid>
-
-      {isPaginating && (
-        <Grid>
-          {Array.from({ length: 4 }).map((_, i) => (
-            <ContentSkeleton key={`skeleton-more-${i}`} />
-          ))}
-        </Grid>
-      )}
-
-      {!loading && hasMore && (
-        <>
-          <InfiniteObserver onIntersect={onIntersect} rootMargin="300px" />
-          <div style={{ textAlign: "center", color: "#666" }}>
-            Scroll to load more
-          </div>
-        </>
-      )}
-      {!hasMore && !loading && (
-        <div style={{ textAlign: "center", color: "#666" }}>No more items</div>
-      )}
+      {/* Hydrate client component with server-fetched items */}
+      <ContentGridClient initialItems={initialItems} />
     </div>
-  );
-}
-
-export default function Page() {
-  return (
-    <Suspense fallback={<div>Loading page...</div>}>
-      <PageContent />
-    </Suspense>
   );
 }
