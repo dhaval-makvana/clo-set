@@ -1,8 +1,8 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
+import { filterItems, sortItems, paginateItems } from "../helpers/content";
 
 export type Pricing = "Paid" | "Free" | "View Only";
-
 export interface ContentItem {
   id: string;
   photo: string;
@@ -12,15 +12,19 @@ export interface ContentItem {
   price: number;
 }
 
-interface ContentState {
+export interface ContentState {
   allItems: ContentItem[];
   items: ContentItem[];
   page: number;
   pageSize: number;
-  loading: boolean; // true only when fetching from API
-  isPaginating: boolean; // NEW: true when fetching next page from cache
+  loading: boolean; // true while fetching from API
+  isPaginating: boolean; // true while loading next page locally
   hasMore: boolean;
-  filters: { q: string; pricing: Pricing[] };
+  filters: {
+    q: string;
+    pricing: Pricing[];
+  };
+  sortBy: "name" | "priceHigh" | "priceLow";
   error?: string | null;
 }
 
@@ -32,11 +36,15 @@ const initialState: ContentState = {
   loading: false,
   isPaginating: false,
   hasMore: true,
-  filters: { q: "", pricing: [] },
+  filters: {
+    q: "",
+    pricing: [],
+  },
+  sortBy: "name",
   error: null,
 };
 
-// Async thunk to fetch all data once
+// Fetch all data once
 export const fetchContents = createAsyncThunk<
   void,
   void,
@@ -44,7 +52,7 @@ export const fetchContents = createAsyncThunk<
 >("content/fetch", async (_, thunkAPI) => {
   const state = thunkAPI.getState().content;
 
-  // Skip fetching if data already cached
+  // Avoid duplicate fetches
   if (state.allItems.length > 0) return;
 
   const res = await axios.get(
@@ -62,47 +70,43 @@ export const fetchContents = createAsyncThunk<
   thunkAPI.dispatch(setAllItems(all));
 });
 
-function mapPricing(option: number): Pricing {
-  return option === 0 ? "Paid" : option === 1 ? "Free" : "View Only";
-}
-
-function applyFiltersAndPagination(state: ContentState) {
-  let filtered = [...state.allItems];
-
-  // Apply search
-  if (state.filters.q) {
-    const query = state.filters.q.toLowerCase();
-    filtered = filtered.filter(
-      (i) =>
-        i.userName.toLowerCase().includes(query) ||
-        i.title.toLowerCase().includes(query)
-    );
-  }
-
-  // Apply pricing filter
-  if (state.filters.pricing.length) {
-    filtered = filtered.filter((i) =>
-      state.filters.pricing.includes(i.pricing)
-    );
-  }
-
-  const end = state.page * state.pageSize;
-  state.items = filtered.slice(0, end);
-  state.hasMore = end < filtered.length;
-}
-
-// Async thunk to delay next page
+// Delay pagination so skeletons show
 export const loadNextPage = createAsyncThunk<
   void,
   void,
   { state: { content: ContentState } }
 >("content/loadNextPage", async (_, thunkAPI) => {
   thunkAPI.dispatch(startPagination());
-  await new Promise((resolve) => setTimeout(resolve, 500)); // 0.5s delay
+  await new Promise((resolve) => setTimeout(resolve, 500)); // simulate network delay
   thunkAPI.dispatch(incPage());
   thunkAPI.dispatch(stopPagination());
 });
 
+// Map numeric API pricing option to enum
+function mapPricing(option: number): Pricing {
+  // Updated mapping: 0 = Paid, 1 = Free, 2 = View Only
+  return option === 0 ? "Paid" : option === 1 ? "Free" : "View Only";
+}
+
+// Helper: Apply filter/sort/pagination to state
+function applyFiltersAndPagination(state: ContentState) {
+  const filtered = filterItems(
+    state.allItems,
+    state.filters.q,
+    state.filters.pricing
+  );
+  const sorted = sortItems(filtered, state.sortBy);
+  const { pageItems, hasMore } = paginateItems(
+    sorted,
+    state.page,
+    state.pageSize
+  );
+
+  state.items = pageItems;
+  state.hasMore = hasMore;
+}
+
+// Redux slice
 const slice = createSlice({
   name: "content",
   initialState,
@@ -144,6 +148,11 @@ const slice = createSlice({
       state.page = 1;
       applyFiltersAndPagination(state);
     },
+    setSortBy(state, action: PayloadAction<"name" | "priceHigh" | "priceLow">) {
+      state.sortBy = action.payload;
+      state.page = 1;
+      applyFiltersAndPagination(state);
+    },
     startPagination(state) {
       state.isPaginating = true;
     },
@@ -166,6 +175,7 @@ const slice = createSlice({
   },
 });
 
+// Export actions and reducer
 export const {
   setAllItems,
   setQuery,
@@ -173,18 +183,9 @@ export const {
   resetFilters,
   incPage,
   setPageFromUrl,
+  setSortBy,
   startPagination,
   stopPagination,
 } = slice.actions;
+
 export default slice.reducer;
-
-// export const {
-//   setAllItems,
-//   setQuery,
-//   togglePricing,
-//   resetFilters,
-//   incPage,
-//   setPageFromUrl,
-// } = slice.actions;
-
-// export default slice.reducer;
