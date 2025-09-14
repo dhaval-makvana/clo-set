@@ -1,18 +1,22 @@
 "use client";
+// lib
 import React, { useEffect, useCallback } from "react";
-import { useAppDispatch, useAppSelector } from "../store";
 import { useSearchParams } from "next/navigation";
-import Filters from "../components/Filters";
-import SearchBar from "../components/Searchbar";
-import ContentCard from "../components/ContentCard";
-import { Grid } from "../components/ContentGrid";
-import { InfiniteObserver } from "../components/InfiniteObserver";
-import ContentSkeleton from "../components/Shimmer";
+
+// components
+import FilterBar from "@/components/FilterBar";
+import ContentCard from "@/components/ProductCard";
+import { Grid } from "@/components/ProductGrid";
+import { InfiniteObserver } from "@/components/InfiniteObserver";
+import ContentSkeleton from "@/components/Shimmer";
+
+// store
+import { useAppDispatch, useAppSelector } from "@/store";
 import {
   fetchContents,
   loadNextPage,
   setPageFromUrl,
-} from "../store/slices/contentSlice";
+} from "@/store/slices/contentSlice";
 
 export default function Page() {
   const dispatch = useAppDispatch();
@@ -24,7 +28,17 @@ export default function Page() {
   useEffect(() => {
     const q = searchParams.get("q") ?? "";
     const pricing = searchParams.get("pricing")?.split(",") ?? [];
-    dispatch(setPageFromUrl({ q, pricing: pricing as any }));
+    const minP = searchParams.get("minPrice");
+    const maxP = searchParams.get("maxPrice");
+
+    let priceRange: [number, number] | undefined;
+    if (minP != null && maxP != null) {
+      const minN = Number(minP);
+      const maxN = Number(maxP);
+      if (!Number.isNaN(minN) && !Number.isNaN(maxN)) priceRange = [minN, maxN];
+    }
+
+    dispatch(setPageFromUrl({ q, pricing: pricing as any, priceRange }));
     dispatch(fetchContents());
   }, [dispatch, searchParams]);
 
@@ -45,10 +59,11 @@ export default function Page() {
       }}
     >
       <h1>CLO-SET Connect — Store</h1>
-      <div style={{ display: "grid", gap: 12 }}>
+      {/* <div style={{ display: "grid", gap: 12 }}>
         <SearchBar />
         <Filters />
-      </div>
+      </div> */}
+      <FilterBar />
 
       <Grid>
         {loading && page === 1

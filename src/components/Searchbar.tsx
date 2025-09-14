@@ -3,8 +3,8 @@ import React, { useState, useEffect } from "react";
 import styled from "@emotion/styled";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter, useSearchParams } from "next/navigation";
-import { setQuery } from "../store/slices/contentSlice";
-import { RootState } from "../store";
+import { setQuery } from "@/store/slices/contentSlice";
+import { RootState } from "@/store";
 const Wrap = styled.div`
   background: white;
   padding: 8px;

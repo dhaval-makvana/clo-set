@@ -1,7 +1,10 @@
 "use client";
+// lib
 import { Provider } from "react-redux";
-import { store } from "../store";
 import { Global, css } from "@emotion/react";
+
+// store
+import { store } from "@/store";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (

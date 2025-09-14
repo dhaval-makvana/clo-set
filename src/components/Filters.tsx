@@ -1,70 +1,93 @@
 "use client";
 import styled from "@emotion/styled";
-import React from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { useRouter, useSearchParams } from "next/navigation";
-import { RootState } from "../store";
+import { useAppDispatch, useAppSelector } from "@/store";
 import {
-  Pricing,
   togglePricing,
   resetFilters,
-} from "../store/slices/contentSlice";
-const Panel = styled.div`
-  background: white;
-  padding: 12px;
-  border-radius: 8px;
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  flex-wrap: wrap;
+  setPriceRange,
+} from "@/store/slices/contentSlice";
+import { useSyncFiltersToUrl } from "@/utils";
+
+import PriceSlider from "./PriceSlider";
+
+const FilterChip = styled.button<{ active?: boolean }>`
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid ${({ active }) => (active ? "#0070f3" : "#ddd")};
+  background: ${({ active }) => (active ? "#e6f0ff" : "white")};
+  cursor: pointer;
+  font-size: 13px;
 `;
-const Checkbox = ({ label, checked, onChange }: any) => (
-  <label
-    style={{ display: "flex", gap: 8, alignItems: "center", cursor: "pointer" }}
-  >
-    <input type="checkbox" checked={checked} onChange={onChange} />
-    <span>{label}</span>
-  </label>
-);
+
+const ResetButton = styled.button`
+  padding: 6px 12px;
+  border: none;
+  background: transparent;
+  color: #666;
+  cursor: pointer;
+  font-size: 13px;
+
+  &:hover {
+    text-decoration: underline;
+  }
+`;
+
+const pricingOptions: ("Paid" | "Free" | "View Only")[] = [
+  "Paid",
+  "Free",
+  "View Only",
+];
+
 export default function Filters() {
-  const dispatch = useDispatch();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const filters = useSelector((s: RootState) => s.content.filters);
-  const toggle = (p: Pricing) => {
-    dispatch(togglePricing(p));
-    const params = new URLSearchParams(searchParams.toString());
-    const current = new Set(filters.pricing);
-    current.has(p) ? current.delete(p) : current.add(p);
-    current.size
-      ? params.set("pricing", Array.from(current).join(","))
-      : params.delete("pricing");
-    router.replace("?" + params.toString());
+  const dispatch = useAppDispatch();
+  const { setParams } = useSyncFiltersToUrl();
+  const active = useAppSelector((s) => s.content.filters.pricing);
+  const query = useAppSelector((s) => s.content.filters.q);
+  const maxPriceAvailable = useAppSelector((s) => s.content.maxPriceAvailable);
+  const [min, max] = useAppSelector((s) => s.content.filters.priceRange);
+  const activePricing = useAppSelector((s) => s.content.filters.pricing);
+
+  const handlePriceChange = (range: [number, number]) => {
+    dispatch(setPriceRange(range));
+    setParams(query, activePricing, range); // include range in URL
   };
-  const onReset = () => {
+
+  const handleReset = () => {
     dispatch(resetFilters());
-    router.replace("?");
+    setParams("", []); // ✅ clear URL as well
   };
+
   return (
-    <Panel>
-      <Checkbox
-        label="Paid"
-        checked={filters.pricing.includes("Paid")}
-        onChange={() => toggle("Paid")}
-      />
-      <Checkbox
-        label="Free"
-        checked={filters.pricing.includes("Free")}
-        onChange={() => toggle("Free")}
-      />
-      <Checkbox
-        label="View Only"
-        checked={filters.pricing.includes("View Only")}
-        onChange={() => toggle("View Only")}
-      />
-      <button onClick={onReset} style={{ marginLeft: "auto" }}>
-        Reset
-      </button>
-    </Panel>
+    <>
+      {pricingOptions.map((p) => (
+        <FilterChip
+          key={p}
+          active={active.includes(p)}
+          onClick={() => {
+            dispatch(togglePricing(p));
+            const newPricing = active.includes(p)
+              ? active.filter((x) => x !== p)
+              : [...active, p];
+            setParams(query, newPricing);
+          }}
+        >
+          {p}
+        </FilterChip>
+      ))}
+
+      {maxPriceAvailable === 0 ? (
+        <div style={{ minHeight: "40px" }}>Loading price filter...</div>
+      ) : (
+        <PriceSlider
+          min={min}
+          max={max}
+          onChange={handlePriceChange}
+          minLimit={0}
+          maxLimit={maxPriceAvailable}
+        />
+      )}
+
+      <ResetButton onClick={handleReset}>Reset</ResetButton>
+    </>
   );
 }

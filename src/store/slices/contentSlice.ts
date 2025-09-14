@@ -23,9 +23,11 @@ export interface ContentState {
   filters: {
     q: string;
     pricing: Pricing[];
+    priceRange: [number, number];
   };
   sortBy: "name" | "priceHigh" | "priceLow";
   error?: string | null;
+  maxPriceAvailable: number;
 }
 
 const initialState: ContentState = {
@@ -39,9 +41,11 @@ const initialState: ContentState = {
   filters: {
     q: "",
     pricing: [],
+    priceRange: [0, Infinity],
   },
   sortBy: "name",
   error: null,
+  maxPriceAvailable: 0,
 };
 
 // Fetch all data once
@@ -93,7 +97,8 @@ function applyFiltersAndPagination(state: ContentState) {
   const filtered = filterItems(
     state.allItems,
     state.filters.q,
-    state.filters.pricing
+    state.filters.pricing,
+    state.filters.priceRange // <-- important
   );
   const sorted = sortItems(filtered, state.sortBy);
   const { pageItems, hasMore } = paginateItems(
@@ -113,6 +118,22 @@ const slice = createSlice({
   reducers: {
     setAllItems(state, action: PayloadAction<ContentItem[]>) {
       state.allItems = action.payload;
+
+      // ✅ Consider only "Paid" products for max price
+      const maxPrice = action.payload
+        .filter((item) => item.pricing === "Paid")
+        .reduce((max, item) => Math.max(max, item.price), 0);
+
+      state.maxPriceAvailable = maxPrice;
+
+      // only set default price range if current range is the initial placeholder (0,0)
+      if (
+        state.filters.priceRange[0] === 0 &&
+        state.filters.priceRange[1] === 0
+      ) {
+        state.filters.priceRange = [0, maxPrice];
+      }
+
       state.page = 1;
       applyFiltersAndPagination(state);
     },
@@ -130,8 +151,17 @@ const slice = createSlice({
       state.page = 1;
       applyFiltersAndPagination(state);
     },
+    setPriceRange(state, action: PayloadAction<[number, number]>) {
+      state.filters.priceRange = action.payload;
+      state.page = 1;
+      applyFiltersAndPagination(state);
+    },
     resetFilters(state) {
-      state.filters = { q: "", pricing: [] };
+      state.filters = {
+        q: "",
+        pricing: [],
+        priceRange: [0, state.maxPriceAvailable],
+      };
       state.page = 1;
       applyFiltersAndPagination(state);
     },
@@ -141,10 +171,23 @@ const slice = createSlice({
     },
     setPageFromUrl(
       state,
-      action: PayloadAction<{ q: string; pricing: Pricing[] }>
+      action: PayloadAction<{
+        q: string;
+        pricing: Pricing[];
+        priceRange?: [number, number];
+      }>
     ) {
       state.filters.q = action.payload.q;
       state.filters.pricing = action.payload.pricing;
+      if (action.payload.priceRange) {
+        state.filters.priceRange = action.payload.priceRange;
+      } else if (
+        state.maxPriceAvailable > 0 &&
+        state.filters.priceRange[0] === 0 &&
+        state.filters.priceRange[1] === 0
+      ) {
+        state.filters.priceRange = [0, state.maxPriceAvailable];
+      }
       state.page = 1;
       applyFiltersAndPagination(state);
     },
@@ -186,6 +229,7 @@ export const {
   setSortBy,
   startPagination,
   stopPagination,
+  setPriceRange,
 } = slice.actions;
 
 export default slice.reducer;

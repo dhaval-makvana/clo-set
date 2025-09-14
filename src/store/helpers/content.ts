@@ -5,21 +5,35 @@ export type SortBy = "name" | "priceHigh" | "priceLow";
 export function filterItems(
   items: ContentItem[],
   q: string,
-  pricing: Pricing[]
+  pricing: Pricing[],
+  priceRange?: [number, number]
 ): ContentItem[] {
   let filtered = [...items];
 
   if (q) {
-    const query = q.toLowerCase();
-    filtered = filtered.filter(
-      (i) =>
-        i.userName.toLowerCase().includes(query) ||
-        i.title.toLowerCase().includes(query)
-    );
+    // ✅ normalize: lowercase + trim extra spaces
+    const query = q.trim().toLowerCase();
+
+    filtered = filtered.filter((i) => {
+      const name = i.userName.trim().toLowerCase();
+      const title = i.title.trim().toLowerCase();
+
+      // ✅ match even if extra spaces exist
+      return name.includes(query) || title.includes(query);
+    });
   }
 
   if (pricing.length) {
     filtered = filtered.filter((i) => pricing.includes(i.pricing));
+  }
+
+  if (priceRange) {
+    const [min, max] = priceRange;
+    filtered = filtered.filter((i) => {
+      // only meaningful for Paid items, but safe: check price
+      const p = Number(i.price ?? 0);
+      return p >= min && p <= max;
+    });
   }
 
   return filtered;
