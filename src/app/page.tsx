@@ -7,16 +7,19 @@ import SearchBar from "../components/Searchbar";
 import ContentCard from "../components/ContentCard";
 import { Grid } from "../components/ContentGrid";
 import { InfiniteObserver } from "../components/InfiniteObserver";
+import ContentSkeleton from "../components/Shimmer";
 import {
   fetchContents,
-  incPage,
+  loadNextPage,
   setPageFromUrl,
 } from "../store/slices/contentSlice";
 
 export default function Page() {
   const dispatch = useAppDispatch();
   const searchParams = useSearchParams();
-  const { items, loading, hasMore, page } = useAppSelector((s) => s.content);
+  const { items, loading, isPaginating, hasMore, page } = useAppSelector(
+    (s) => s.content
+  );
 
   useEffect(() => {
     const q = searchParams.get("q") ?? "";
@@ -26,7 +29,9 @@ export default function Page() {
   }, [dispatch, searchParams]);
 
   const onIntersect = useCallback(() => {
-    if (!loading && hasMore) dispatch(incPage());
+    if (!loading && hasMore) {
+      dispatch(loadNextPage()); // uses thunk with delay
+    }
   }, [dispatch, loading, hasMore]);
 
   return (
@@ -46,14 +51,21 @@ export default function Page() {
       </div>
 
       <Grid>
-        {items.map((it) => (
-          <ContentCard key={it.id} item={it} />
-        ))}
+        {loading && page === 1
+          ? Array.from({ length: 12 }).map((_, i) => (
+              <ContentSkeleton key={`skeleton-${i}`} />
+            ))
+          : items.map((it) => <ContentCard key={it.id} item={it} />)}
       </Grid>
 
-      {loading && page === 1 && (
-        <div style={{ textAlign: "center" }}>Loading data...</div>
+      {isPaginating && (
+        <Grid>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <ContentSkeleton key={`skeleton-more-${i}`} />
+          ))}
+        </Grid>
       )}
+
       {!loading && hasMore && (
         <>
           <InfiniteObserver onIntersect={onIntersect} rootMargin="300px" />

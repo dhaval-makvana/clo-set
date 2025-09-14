@@ -17,12 +17,10 @@ interface ContentState {
   items: ContentItem[];
   page: number;
   pageSize: number;
-  loading: boolean;
+  loading: boolean; // true only when fetching from API
+  isPaginating: boolean; // NEW: true when fetching next page from cache
   hasMore: boolean;
-  filters: {
-    q: string;
-    pricing: Pricing[];
-  };
+  filters: { q: string; pricing: Pricing[] };
   error?: string | null;
 }
 
@@ -32,11 +30,9 @@ const initialState: ContentState = {
   page: 1,
   pageSize: 12,
   loading: false,
+  isPaginating: false,
   hasMore: true,
-  filters: {
-    q: "",
-    pricing: [],
-  },
+  filters: { q: "", pricing: [] },
   error: null,
 };
 
@@ -67,64 +63,8 @@ export const fetchContents = createAsyncThunk<
 });
 
 function mapPricing(option: number): Pricing {
-  return option === 2 ? "Paid" : option === 1 ? "View Only" : "Free";
+  return option === 0 ? "Paid" : option === 1 ? "Free" : "View Only";
 }
-
-const slice = createSlice({
-  name: "content",
-  initialState,
-  reducers: {
-    setAllItems(state, action: PayloadAction<ContentItem[]>) {
-      state.allItems = action.payload;
-      state.page = 1;
-      applyFiltersAndPagination(state);
-    },
-    setQuery(state, action: PayloadAction<string>) {
-      state.filters.q = action.payload;
-      state.page = 1;
-      applyFiltersAndPagination(state);
-    },
-    togglePricing(state, action: PayloadAction<Pricing>) {
-      const p = action.payload;
-      const idx = state.filters.pricing.indexOf(p);
-      if (idx >= 0) state.filters.pricing.splice(idx, 1);
-      else state.filters.pricing.push(p);
-      state.page = 1;
-      applyFiltersAndPagination(state);
-    },
-    resetFilters(state) {
-      state.filters = { q: "", pricing: [] };
-      state.page = 1;
-      applyFiltersAndPagination(state);
-    },
-    incPage(state) {
-      state.page += 1;
-      applyFiltersAndPagination(state);
-    },
-    setPageFromUrl(
-      state,
-      action: PayloadAction<{ q: string; pricing: Pricing[] }>
-    ) {
-      state.filters.q = action.payload.q;
-      state.filters.pricing = action.payload.pricing;
-      state.page = 1;
-      applyFiltersAndPagination(state);
-    },
-  },
-  extraReducers: (builder) => {
-    builder.addCase(fetchContents.pending, (state) => {
-      state.loading = true;
-    });
-    builder.addCase(fetchContents.fulfilled, (state) => {
-      state.loading = false;
-      applyFiltersAndPagination(state);
-    });
-    builder.addCase(fetchContents.rejected, (state, action) => {
-      state.loading = false;
-      state.error = action.error.message ?? "Failed to fetch content";
-    });
-  },
-});
 
 function applyFiltersAndPagination(state: ContentState) {
   let filtered = [...state.allItems];
@@ -151,6 +91,81 @@ function applyFiltersAndPagination(state: ContentState) {
   state.hasMore = end < filtered.length;
 }
 
+// Async thunk to delay next page
+export const loadNextPage = createAsyncThunk<
+  void,
+  void,
+  { state: { content: ContentState } }
+>("content/loadNextPage", async (_, thunkAPI) => {
+  thunkAPI.dispatch(startPagination());
+  await new Promise((resolve) => setTimeout(resolve, 500)); // 0.5s delay
+  thunkAPI.dispatch(incPage());
+  thunkAPI.dispatch(stopPagination());
+});
+
+const slice = createSlice({
+  name: "content",
+  initialState,
+  reducers: {
+    setAllItems(state, action: PayloadAction<ContentItem[]>) {
+      state.allItems = action.payload;
+      state.page = 1;
+      applyFiltersAndPagination(state);
+    },
+    setQuery(state, action: PayloadAction<string>) {
+      state.filters.q = action.payload;
+      state.page = 1;
+      applyFiltersAndPagination(state);
+    },
+    togglePricing(state, action: PayloadAction<Pricing>) {
+      const p = action.payload;
+      const idx = state.filters.pricing.indexOf(p);
+      idx >= 0
+        ? state.filters.pricing.splice(idx, 1)
+        : state.filters.pricing.push(p);
+      state.page = 1;
+      applyFiltersAndPagination(state);
+    },
+    resetFilters(state) {
+      state.filters = { q: "", pricing: [] };
+      state.page = 1;
+      applyFiltersAndPagination(state);
+    },
+    incPage(state) {
+      state.page += 1;
+      applyFiltersAndPagination(state);
+    },
+    setPageFromUrl(
+      state,
+      action: PayloadAction<{ q: string; pricing: Pricing[] }>
+    ) {
+      state.filters.q = action.payload.q;
+      state.filters.pricing = action.payload.pricing;
+      state.page = 1;
+      applyFiltersAndPagination(state);
+    },
+    startPagination(state) {
+      state.isPaginating = true;
+    },
+    stopPagination(state) {
+      state.isPaginating = false;
+    },
+  },
+  extraReducers: (builder) => {
+    builder.addCase(fetchContents.pending, (state) => {
+      state.loading = true;
+    });
+    builder.addCase(fetchContents.fulfilled, (state) => {
+      state.loading = false;
+      applyFiltersAndPagination(state);
+    });
+    builder.addCase(fetchContents.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.error.message ?? "Failed to fetch content";
+    });
+  },
+});
+
 export const {
   setAllItems,
   setQuery,
@@ -158,6 +173,18 @@ export const {
   resetFilters,
   incPage,
   setPageFromUrl,
+  startPagination,
+  stopPagination,
 } = slice.actions;
-
 export default slice.reducer;
+
+// export const {
+//   setAllItems,
+//   setQuery,
+//   togglePricing,
+//   resetFilters,
+//   incPage,
+//   setPageFromUrl,
+// } = slice.actions;
+
+// export default slice.reducer;
