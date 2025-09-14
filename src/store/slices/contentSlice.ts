@@ -1,8 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import axios from "axios";
 import { filterItems, sortItems, paginateItems } from "../helpers/content";
-import { ApiContentResponse } from "@/types/api";
 import { ContentItem, Pricing, SortBy } from "@/types";
+import { fetchAllProducts } from "@/service/product";
 
 export interface ContentState {
   allItems: ContentItem[];
@@ -42,28 +41,18 @@ const initialState: ContentState = {
 
 // Fetch all data once
 export const fetchContents = createAsyncThunk<
-  void,
+  ContentItem[],
   void,
   { state: { content: ContentState } }
 >("content/fetch", async (_, thunkAPI) => {
   const state = thunkAPI.getState().content;
 
   // Avoid duplicate fetches
-  if (state.allItems.length > 0) return;
+  if (state.allItems.length > 0) return [];
 
-  const res = await axios.get<ApiContentResponse[]>(
-    "https://closet-recruiting-api.azurewebsites.net/api/data"
-  );
-  const all = res.data.map((it, idx) => ({
-    id: it.id ?? `${it.creator}-${it.title}-${idx}`,
-    photo: it.imagePath,
-    userName: it.creator,
-    title: it.title,
-    pricing: mapPricing(it.pricingOption),
-    price: it.price,
-  }));
-
-  thunkAPI.dispatch(setAllItems(all));
+  const allItems = await fetchAllProducts();
+  thunkAPI.dispatch(setAllItems(allItems));
+  return allItems;
 });
 
 // Delay pagination so skeletons show
@@ -77,12 +66,6 @@ export const loadNextPage = createAsyncThunk<
   thunkAPI.dispatch(incPage());
   thunkAPI.dispatch(stopPagination());
 });
-
-// Map numeric API pricing option to enum
-function mapPricing(option: number): Pricing {
-  // Updated mapping: 0 = Paid, 1 = Free, 2 = View Only
-  return option === 0 ? "Paid" : option === 1 ? "Free" : "View Only";
-}
 
 // Helper: Apply filter/sort/pagination to state
 function applyFiltersAndPagination(state: ContentState) {

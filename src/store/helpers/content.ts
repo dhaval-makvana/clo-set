@@ -1,6 +1,4 @@
-import { ContentItem, Pricing } from "../slices/contentSlice";
-
-export type SortBy = "name" | "priceHigh" | "priceLow";
+import { ContentItem, Pricing, SortBy } from "@/types";
 
 export function filterItems(
   items: ContentItem[],

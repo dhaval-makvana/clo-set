@@ -1,6 +1,6 @@
 "use client";
 import styled from "@emotion/styled";
-import { ContentItem } from "@/store/slices/contentSlice";
+import { ContentItem } from "@/types";
 
 const Card = styled.div`
   background: white;
