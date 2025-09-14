@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import styled from "@emotion/styled";
 import { useAppDispatch, useAppSelector } from "@/store";
-import { setQuery } from "@/store/slices/contentSlice";
+import { setQuery } from "@/store/slices/productSlice";
 import { useRouter, useSearchParams } from "next/navigation";
 import { colors, radii } from "@/theme/tokens";
 

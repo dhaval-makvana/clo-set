@@ -1,4 +1,5 @@
 import { ContentItem, Pricing, SortBy } from "@/types";
+import { ContentState } from "../slices/productSlice";
 
 export function filterItems(
   items: ContentItem[],
@@ -9,14 +10,14 @@ export function filterItems(
   let filtered = [...items];
 
   if (q) {
-    // ✅ normalize: lowercase + trim extra spaces
+    // normalize: lowercase + trim extra spaces
     const query = q.trim().toLowerCase();
 
     filtered = filtered.filter((i) => {
       const name = i.userName.trim().toLowerCase();
       const title = i.title.trim().toLowerCase();
 
-      // ✅ match even if extra spaces exist
+      // match even if extra spaces exist
       return name.includes(query) || title.includes(query);
     });
   }
@@ -59,4 +60,22 @@ export function paginateItems(
     pageItems: items.slice(0, end),
     hasMore: end < items.length,
   };
+}
+
+export function applyFiltersAndPagination(state: ContentState) {
+  const filtered = filterItems(
+    state.allItems,
+    state.filters.q,
+    state.filters.pricing,
+    state.filters.priceRange
+  );
+  const sorted = sortItems(filtered, state.sortBy);
+  const { pageItems, hasMore } = paginateItems(
+    sorted,
+    state.page,
+    state.pageSize
+  );
+
+  state.items = pageItems;
+  state.hasMore = hasMore;
 }

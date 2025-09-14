@@ -5,7 +5,7 @@ import {
   togglePricing,
   resetFilters,
   setPriceRange,
-} from "@/store/slices/contentSlice";
+} from "@/store/slices/productSlice";
 import { useSyncFiltersToUrl } from "@/hooks";
 import { colors, radii, typography } from "@/theme/tokens";
 import type { Pricing } from "@/types";

@@ -6,8 +6,9 @@ import ContentCard from "@/components/ProductCard";
 import { Grid } from "@/components/ProductGrid";
 import { InfiniteObserver } from "@/components/InfiniteObserver";
 import ContentSkeleton from "@/components/Shimmer";
-import { setAllItems, loadNextPage } from "@/store/slices/contentSlice";
+import { setAllItems, setLoading, setError } from "@/store/slices/productSlice";
 import { ContentItem } from "@/types";
+import { loadNextPage } from "@/store/actions/product";
 
 export default function ContentGridClient({
   initialItems,
@@ -21,7 +22,14 @@ export default function ContentGridClient({
 
   // Hydrate store with server data
   useEffect(() => {
-    dispatch(setAllItems(initialItems));
+    dispatch(setLoading(true));
+    try {
+      dispatch(setAllItems(initialItems));
+    } catch (err) {
+      dispatch(setError("Failed to load data"));
+    } finally {
+      dispatch(setLoading(false));
+    }
   }, [dispatch, initialItems]);
 
   const onIntersect = useCallback(() => {

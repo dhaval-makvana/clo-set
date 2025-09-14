@@ -1,7 +1,7 @@
 "use client";
 import styled from "@emotion/styled";
 import { useAppDispatch, useAppSelector } from "@/store";
-import { setSortBy } from "@/store/slices/contentSlice";
+import { setSortBy } from "@/store/slices/productSlice";
 import { SortBy } from "@/types";
 import { colors, radii } from "@/theme/tokens";
 

@@ -1,15 +1,14 @@
-import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import { filterItems, sortItems, paginateItems } from "../helpers/content";
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { applyFiltersAndPagination } from "../helpers/content";
 import { ContentItem, Pricing, SortBy } from "@/types";
-import { fetchAllProducts } from "@/service/product";
 
 export interface ContentState {
   allItems: ContentItem[];
   items: ContentItem[];
   page: number;
   pageSize: number;
-  loading: boolean; // true while fetching from API
-  isPaginating: boolean; // true while loading next page locally
+  loading: boolean;
+  isPaginating: boolean;
   hasMore: boolean;
   filters: {
     q: string;
@@ -39,71 +38,26 @@ const initialState: ContentState = {
   maxPriceAvailable: 0,
 };
 
-// Fetch all data once
-export const fetchContents = createAsyncThunk<
-  ContentItem[],
-  void,
-  { state: { content: ContentState } }
->("content/fetch", async (_, thunkAPI) => {
-  const state = thunkAPI.getState().content;
-
-  // Avoid duplicate fetches
-  if (state.allItems.length > 0) return [];
-
-  const allItems = await fetchAllProducts();
-  thunkAPI.dispatch(setAllItems(allItems));
-  return allItems;
-});
-
-// Delay pagination so skeletons show
-export const loadNextPage = createAsyncThunk<
-  void,
-  void,
-  { state: { content: ContentState } }
->("content/loadNextPage", async (_, thunkAPI) => {
-  thunkAPI.dispatch(startPagination());
-  await new Promise((resolve) => setTimeout(resolve, 500)); // simulate network delay
-  thunkAPI.dispatch(incPage());
-  thunkAPI.dispatch(stopPagination());
-});
-
-// Helper: Apply filter/sort/pagination to state
-function applyFiltersAndPagination(state: ContentState) {
-  const filtered = filterItems(
-    state.allItems,
-    state.filters.q,
-    state.filters.pricing,
-    state.filters.priceRange // <-- important
-  );
-  const sorted = sortItems(filtered, state.sortBy);
-  const { pageItems, hasMore } = paginateItems(
-    sorted,
-    state.page,
-    state.pageSize
-  );
-
-  state.items = pageItems;
-  state.hasMore = hasMore;
-}
-
-// Redux slice
 const slice = createSlice({
   name: "content",
   initialState,
   reducers: {
+    setLoading(state, action: PayloadAction<boolean>) {
+      state.loading = action.payload;
+    },
     setAllItems(state, action: PayloadAction<ContentItem[]>) {
       state.allItems = action.payload;
 
-      // ✅ Consider only "Paid" products for max price
+      // Consider only "Paid" products for max price
       const maxPrice = action.payload
         .filter((item) => item.pricing === "Paid")
         .reduce((max, item) => Math.max(max, item.price), 0);
 
       state.maxPriceAvailable = maxPrice;
 
-      // ✅ Fix: Ensure priceRange is set to a proper numeric range
+      // Ensure priceRange is numeric (avoid Infinity)
       if (
-        !Number.isFinite(state.filters.priceRange[1]) || // handle Infinity
+        !Number.isFinite(state.filters.priceRange[1]) ||
         state.filters.priceRange[1] === 0
       ) {
         state.filters.priceRange = [0, maxPrice];
@@ -177,24 +131,14 @@ const slice = createSlice({
     stopPagination(state) {
       state.isPaginating = false;
     },
-  },
-  extraReducers: (builder) => {
-    builder.addCase(fetchContents.pending, (state) => {
-      state.loading = true;
-    });
-    builder.addCase(fetchContents.fulfilled, (state) => {
-      state.loading = false;
-      applyFiltersAndPagination(state);
-    });
-    builder.addCase(fetchContents.rejected, (state, action) => {
-      state.loading = false;
-      state.error = action.error.message ?? "Failed to fetch content";
-    });
+    setError(state, action: PayloadAction<string | null>) {
+      state.error = action.payload;
+    },
   },
 });
 
-// Export actions and reducer
 export const {
+  setLoading,
   setAllItems,
   setQuery,
   togglePricing,
@@ -205,6 +149,7 @@ export const {
   startPagination,
   stopPagination,
   setPriceRange,
+  setError,
 } = slice.actions;
 
 export default slice.reducer;
