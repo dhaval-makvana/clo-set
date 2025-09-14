@@ -6,7 +6,7 @@ import {
   resetFilters,
   setPriceRange,
 } from "@/store/slices/contentSlice";
-import { useSyncFiltersToUrl } from "@/utils";
+import { useSyncFiltersToUrl } from "@/hooks";
 
 import PriceSlider from "./PriceSlider";
 
