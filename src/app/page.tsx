@@ -1,6 +1,6 @@
 "use client";
-// lib
-import React, { useEffect, useCallback } from "react";
+
+import React, { useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
 // components
@@ -18,7 +18,9 @@ import {
   setPageFromUrl,
 } from "@/store/slices/contentSlice";
 
-export default function Page() {
+import { Pricing } from "@/types";
+
+function PageContent() {
   const dispatch = useAppDispatch();
   const searchParams = useSearchParams();
   const { items, loading, isPaginating, hasMore, page } = useAppSelector(
@@ -27,7 +29,17 @@ export default function Page() {
 
   useEffect(() => {
     const q = searchParams.get("q") ?? "";
-    const pricing = searchParams.get("pricing")?.split(",") ?? [];
+
+    const pricingParam = searchParams.get("pricing");
+    const pricing: Pricing[] = pricingParam
+      ? pricingParam
+          .split(",")
+          .filter(
+            (p): p is Pricing =>
+              p === "Paid" || p === "Free" || p === "View Only"
+          )
+      : [];
+
     const minP = searchParams.get("minPrice");
     const maxP = searchParams.get("maxPrice");
 
@@ -38,7 +50,7 @@ export default function Page() {
       if (!Number.isNaN(minN) && !Number.isNaN(maxN)) priceRange = [minN, maxN];
     }
 
-    dispatch(setPageFromUrl({ q, pricing: pricing as any, priceRange }));
+    dispatch(setPageFromUrl({ q, pricing, priceRange }));
     dispatch(fetchContents());
   }, [dispatch, searchParams]);
 
@@ -59,10 +71,7 @@ export default function Page() {
       }}
     >
       <h1>CLO-SET Connect — Store</h1>
-      {/* <div style={{ display: "grid", gap: 12 }}>
-        <SearchBar />
-        <Filters />
-      </div> */}
+
       <FilterBar />
 
       <Grid>
@@ -93,5 +102,13 @@ export default function Page() {
         <div style={{ textAlign: "center", color: "#666" }}>No more items</div>
       )}
     </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<div>Loading page...</div>}>
+      <PageContent />
+    </Suspense>
   );
 }

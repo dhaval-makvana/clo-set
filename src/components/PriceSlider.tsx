@@ -79,37 +79,38 @@ export default function PriceSlider({
   };
 
   if (maxLimit <= 0) return <div>—</div>;
-  
+
   const range = maxLimit - minLimit;
   if (range <= 0) return null; // no valid range yet
 
-const leftPercent = ((min - minLimit) / range) * 100;
-const rightPercent = ((max - minLimit) / range) * 100;
-const highlightWidth = rightPercent - leftPercent;
+  const leftPercent = ((min - minLimit) / range) * 100;
+  const rightPercent = ((max - minLimit) / range) * 100;
+  const highlightWidth = rightPercent - leftPercent;
 
-return (
-  <SliderWrapper>
-    <TrackWrapper>
-      <RangeHighlight left={leftPercent} width={highlightWidth} />
-      <Thumb
-        type="range"
-        min={minLimit}
-        max={maxLimit}
-        step={1}
-        value={min}
-        onChange={handleMinChange}
-      />
-      <Thumb
-        type="range"
-        min={minLimit}
-        max={maxLimit}
-        step={1}
-        value={max}
-        onChange={handleMaxChange}
-      />
-    </TrackWrapper>
-    <Label>
-      ${min} - ${max}
-    </Label>
-  </SliderWrapper>
-);
+  return (
+    <SliderWrapper>
+      <TrackWrapper>
+        <RangeHighlight left={leftPercent} width={highlightWidth} />
+        <Thumb
+          type="range"
+          min={minLimit}
+          max={maxLimit}
+          step={1}
+          value={min}
+          onChange={handleMinChange}
+        />
+        <Thumb
+          type="range"
+          min={minLimit}
+          max={maxLimit}
+          step={1}
+          value={max}
+          onChange={handleMaxChange}
+        />
+      </TrackWrapper>
+      <Label>
+        ${min} - ${max}
+      </Label>
+    </SliderWrapper>
+  );
+}

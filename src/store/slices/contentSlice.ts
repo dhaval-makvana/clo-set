@@ -1,16 +1,8 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
 import { filterItems, sortItems, paginateItems } from "../helpers/content";
-
-export type Pricing = "Paid" | "Free" | "View Only";
-export interface ContentItem {
-  id: string;
-  photo: string;
-  userName: string;
-  title: string;
-  pricing: Pricing;
-  price: number;
-}
+import { ApiContentResponse } from "@/types/api";
+import { ContentItem, Pricing, SortBy } from "@/types";
 
 export interface ContentState {
   allItems: ContentItem[];
@@ -25,7 +17,7 @@ export interface ContentState {
     pricing: Pricing[];
     priceRange: [number, number];
   };
-  sortBy: "name" | "priceHigh" | "priceLow";
+  sortBy: SortBy;
   error?: string | null;
   maxPriceAvailable: number;
 }
@@ -59,10 +51,10 @@ export const fetchContents = createAsyncThunk<
   // Avoid duplicate fetches
   if (state.allItems.length > 0) return;
 
-  const res = await axios.get(
+  const res = await axios.get<ApiContentResponse[]>(
     "https://closet-recruiting-api.azurewebsites.net/api/data"
   );
-  const all = (res.data as any[]).map((it, idx) => ({
+  const all = res.data.map((it, idx) => ({
     id: it.id ?? `${it.creator}-${it.title}-${idx}`,
     photo: it.imagePath,
     userName: it.creator,
@@ -191,7 +183,7 @@ const slice = createSlice({
       state.page = 1;
       applyFiltersAndPagination(state);
     },
-    setSortBy(state, action: PayloadAction<"name" | "priceHigh" | "priceLow">) {
+    setSortBy(state, action: PayloadAction<SortBy>) {
       state.sortBy = action.payload;
       state.page = 1;
       applyFiltersAndPagination(state);

@@ -2,6 +2,7 @@
 import styled from "@emotion/styled";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { setSortBy } from "@/store/slices/contentSlice";
+import { SortBy } from "@/types";
 
 const Dropdown = styled.select`
   padding: 6px 10px;
@@ -22,12 +23,14 @@ export default function SortDropdown() {
   const dispatch = useAppDispatch();
   const sortBy = useAppSelector((s) => s.content.sortBy);
 
+  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    // ✅ narrow to SortBy safely
+    const value = e.target.value as SortBy;
+    dispatch(setSortBy(value));
+  };
+
   return (
-    <Dropdown
-      value={sortBy}
-      onChange={(e) => dispatch(setSortBy(e.target.value as any))}
-      aria-label="Sort items"
-    >
+    <Dropdown value={sortBy} onChange={handleChange} aria-label="Sort items">
       <option value="name">Item Name (Default)</option>
       <option value="priceHigh">Higher Price</option>
       <option value="priceLow">Lower Price</option>
